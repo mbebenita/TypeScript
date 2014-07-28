@@ -30,6 +30,14 @@ module ts {
         var anyType = createIntrinsicType(TypeFlags.Any, "any");
         var stringType = createIntrinsicType(TypeFlags.String, "string");
         var numberType = createIntrinsicType(TypeFlags.Number, "number");
+        var intType = createIntrinsicType(TypeFlags.Int, "int");
+        var fixnumType = createIntrinsicType(TypeFlags.Fixnum, "fixnum");
+        var intishType = createIntrinsicType(TypeFlags.Intish, "intish");
+        var floatType = createIntrinsicType(TypeFlags.Float, "float");
+        var floatishType = createIntrinsicType(TypeFlags.Floatish, "floatish");
+        var doubleType = createIntrinsicType(TypeFlags.Double, "double");
+        var signedType = createIntrinsicType(TypeFlags.Signed, "signed");
+        var unsignedType = createIntrinsicType(TypeFlags.Unsigned, "unsigned");
         var booleanType = createIntrinsicType(TypeFlags.Boolean, "boolean");
         var voidType = createIntrinsicType(TypeFlags.Void, "void");
         var undefinedType = createIntrinsicType(TypeFlags.Undefined, "undefined");
@@ -2098,6 +2106,16 @@ module ts {
                     return stringType;
                 case SyntaxKind.NumberKeyword:
                     return numberType;
+                case SyntaxKind.IntKeyword:
+                    return intType;
+                case SyntaxKind.FloatKeyword:
+                    return floatType;
+                case SyntaxKind.DoubleKeyword:
+                    return doubleType;
+                case SyntaxKind.SignedKeyword:
+                    return signedType;
+                case SyntaxKind.UnsignedKeyword:
+                    return unsignedType;
                 case SyntaxKind.BooleanKeyword:
                     return booleanType;
                 case SyntaxKind.VoidKeyword:
@@ -2404,6 +2422,18 @@ module ts {
             }
         }
 
+        function isSubtypeOfIntish(source: Type) {
+            return  source === intishType || isSubtypeOfInt(source);
+        }
+
+        function isSubtypeOfInt(source: Type) {
+            return source === intType || source === signedType || source === unsignedType || source === fixnumType;
+        }
+
+        function isSubtypeOfFloatish(source: Type) {
+            return source === floatishType || source === floatType;
+        }
+
         function checkTypeRelatedTo(source: Type, target: Type, relation: Map<boolean>, errorNode: Node, chainedMessage: DiagnosticMessage, terminalMessage: DiagnosticMessage): boolean {
             var errorInfo: DiagnosticMessageChain;
             var sourceStack: ObjectType[];
@@ -2447,6 +2477,20 @@ module ts {
                         if (source.flags & TypeFlags.Any) return true;
                         if (source === numberType && target.flags & TypeFlags.Enum) return true;
                     }
+
+                    // ASM.js Subtyping
+                    if (target === intishType && isSubtypeOfIntish(source)) {
+                        return true;
+                    } else if (target === intType && isSubtypeOfInt(source)) {
+                        return true;
+                    } else if (target === floatishType && isSubtypeOfIntish(source)) {
+                        return true;
+                    }
+
+                    if (target === numberType && source.flags & TypeFlags.NumberLike) {
+                        return true;
+                    }
+                    // ASM.js Subtype Relations
                 }
 
                 if (source.flags & TypeFlags.TypeParameter && target.flags & TypeFlags.TypeParameter) {
@@ -4259,6 +4303,22 @@ module ts {
             return booleanType;
         }
 
+        function getTypeOfBinaryExpression(operator: SyntaxKind, leftType: Type, rightType: Type): Type {
+          switch (operator) {
+            case SyntaxKind.BarToken: // |
+                return signedType;
+            case SyntaxKind.CaretToken: // ^
+            case SyntaxKind.AmpersandToken: // &
+            case SyntaxKind.GreaterThanGreaterThanToken: // >>
+            case SyntaxKind.LessThanLessThanToken: // <<
+              if (isTypeSubtypeOf(leftType, intishType) && isTypeSubtypeOf(rightType, intishType)) {
+                  return signedType;
+              }
+              return null;
+          }
+          return null;
+        }
+
         function checkBinaryExpression(node: BinaryExpression, contextualType?: Type, contextualMapper?: TypeMapper) {
             var operator = node.operator;
             var leftContextualType = operator === SyntaxKind.BarBarToken ? contextualType : undefined
@@ -4296,12 +4356,15 @@ module ts {
                     if (leftType.flags & (TypeFlags.Undefined | TypeFlags.Null)) leftType = rightType;
                     if (rightType.flags & (TypeFlags.Undefined | TypeFlags.Null)) rightType = leftType;
 
-                    var leftOk = checkArithmeticOperandType(node.left, leftType, Diagnostics.The_left_hand_side_of_an_arithmetic_operation_must_be_of_type_any_number_or_an_enum_type);
-                    var rightOk = checkArithmeticOperandType(node.right, rightType, Diagnostics.The_right_hand_side_of_an_arithmetic_operation_must_be_of_type_any_number_or_an_enum_type);
+                    var leftOk = checkArithmeticOperandType(node.left, leftType, Diagnostics.The_left_hand_side_of_an_arithmetic_operation_must_be_of_type_any_number_i32_or_an_enum_type);
+                    var rightOk = checkArithmeticOperandType(node.right, rightType, Diagnostics.The_right_hand_side_of_an_arithmetic_operation_must_be_of_type_any_number_i32_or_an_enum_type);
                     if (leftOk && rightOk) {
                         checkAssignmentOperator(numberType);
                     }
-
+                    var asmType = getTypeOfBinaryExpression(operator, leftType, rightType);
+                    if (asmType) {
+                        return asmType;
+                    }
                     return numberType;
                 case SyntaxKind.PlusToken:
                 case SyntaxKind.PlusEqualsToken:
@@ -4412,6 +4475,22 @@ module ts {
             return result;
         }
 
+        function checkNumericLiteral(node: LiteralExpression): Type {
+            var value = parseFloat(node.text);
+            var integralValue = value | 0;
+            if (value === integralValue) {
+//                if (integralValue >= 0 && integralValue < 0x80000000) {
+//                    return fixnumType;
+//                } else
+                if (integralValue >= 0x80000000 && integralValue <= 0xffffffff) {
+                    return unsignedType;
+                } else {
+                    return signedType;
+                }
+            }
+            return numberType;
+        }
+
         // Checks an expression and returns its type. The contextualType parameter provides a contextual type for
         // the check or is undefined if there is no contextual type. The contextualMapper parameter serves two
         // purposes: When contextualMapper is not undefined and not equal to the identityMapper function object
@@ -4434,7 +4513,7 @@ module ts {
                 case SyntaxKind.FalseKeyword:
                     return booleanType;
                 case SyntaxKind.NumericLiteral:
-                    return numberType;
+                    return checkNumericLiteral(<LiteralExpression>node);
                 case SyntaxKind.StringLiteral:
                     return stringType;
                 case SyntaxKind.RegularExpressionLiteral:

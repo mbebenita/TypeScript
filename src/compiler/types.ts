@@ -127,6 +127,11 @@ module ts {
         RequireKeyword,
         NumberKeyword,
         SetKeyword,
+        FloatKeyword,
+        DoubleKeyword,
+        SignedKeyword,
+        UnsignedKeyword,
+        IntKeyword,
         StringKeyword,
         // Parse tree nodes
         Missing,
@@ -764,9 +769,21 @@ module ts {
         Anonymous          = 0x00002000,  // Anonymous
         FromSignature      = 0x00004000,  // Created for signature assignment check
 
-        Intrinsic = Any | String | Number | Boolean | Void | Undefined | Null,
+        Float              = 0x00010000,
+        Double             = 0x00020000,
+        Signed             = 0x00040000,
+        Unsigned           = 0x00080000,
+        Int                = 0x00100000,
+        Fixnum             = 0x00200000,
+
+        Floatish           = 0x00400000,
+        Intish             = 0x00800000,
+
+        ASMType            = Float | Double | Signed | Unsigned | Int | Floatish | Intish | Fixnum,
+
+        Intrinsic = Any | String | Number | Boolean | Void | Undefined | Null | ASMType,
         StringLike = String | StringLiteral,
-        NumberLike = Number | Enum,
+        NumberLike = Number | Enum | ASMType,
         ObjectType = Class | Interface | Reference | Anonymous
     }
 

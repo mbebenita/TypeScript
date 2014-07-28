@@ -1200,6 +1200,11 @@ module ts {
             switch (token) {
                 case SyntaxKind.AnyKeyword:
                 case SyntaxKind.StringKeyword:
+                case SyntaxKind.IntKeyword:
+                case SyntaxKind.FloatKeyword:
+                case SyntaxKind.DoubleKeyword:
+                case SyntaxKind.SignedKeyword:
+                case SyntaxKind.UnsignedKeyword:
                 case SyntaxKind.NumberKeyword:
                 case SyntaxKind.BooleanKeyword:
                 case SyntaxKind.VoidKeyword:

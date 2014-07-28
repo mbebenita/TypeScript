@@ -417,15 +417,15 @@
         "category": "Error",
         "code": 2102
     },
-    "The right-hand side of an arithmetic operation must be of type 'any', 'number' or an enum type.": {
+    "The right-hand side of an arithmetic operation must be of type 'any', 'number', 'i32' or an enum type.": {
         "category": "Error",
         "code": 2112
     },
-    "The left-hand side of an arithmetic operation must be of type 'any', 'number' or an enum type.": {
+    "The left-hand side of an arithmetic operation must be of type 'any', 'number', 'i32' or an enum type.": {
         "category": "Error",
         "code": 2113
     },
-    "An arithmetic operand must be of type 'any', 'number' or an enum type.": {
+    "An arithmetic operand must be of type 'any', 'number', 'i32' or an enum type.": {
         "category": "Error",
         "code": 2114
     },

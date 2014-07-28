@@ -2314,6 +2314,8 @@ module ts {
             if (shouldEmitToOwnFile(sourceFile)) {
                 var jsFilePath = getOwnEmitOutputFilePath(sourceFile, ".js");
                 emitFile(jsFilePath, sourceFile);
+                var llFilePath = getOwnEmitOutputFilePath(sourceFile, ".ll");
+                emitBitcodeFile(llFilePath, sourceFile);
             }
         });
         if (compilerOptions.out) {

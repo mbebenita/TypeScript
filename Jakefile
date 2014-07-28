@@ -29,6 +29,7 @@ var compilerSources = [
     "binder.ts",
     "checker.ts",
     "emitter.ts",
+    "bitcode.ts",
     "commandLineParser.ts",
     "tc.ts",
     "diagnosticInformationMap.generated.ts"
